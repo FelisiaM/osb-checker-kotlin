@@ -8,6 +8,8 @@ import io.restassured.RestAssured
 import io.restassured.http.ContentType
 import io.restassured.http.Header
 import io.restassured.module.jsv.JsonSchemaValidator
+import io.restassured.response.ExtractableResponse
+import io.restassured.response.Response
 import org.springframework.stereotype.Service
 import kotlin.test.assertTrue
 
@@ -57,17 +59,7 @@ class ProvisionRequestRunner(
   }
 
   fun runPutProvisionRequestAsync(instanceId: String, requestBody: RequestBody): Int {
-    val response = RestAssured.with()
-        .log().all()
-        .header(Header("X-Broker-API-Version", configuration.apiVersion))
-        .header(Header("Authorization", configuration.correctToken))
-        .contentType(ContentType.JSON)
-        .body(requestBody)
-        .put("/v2/service_instances/$instanceId?accepts_incomplete=true")
-        .then()
-        .log().all()
-        .assertThat()
-        .extract()
+    val response = executeProvision(instanceId, requestBody)
 
     if (response.statusCode() in listOf(201, 202, 200)) {
       JsonSchemaValidator.matchesJsonSchemaInClasspath("provision-response-schema.json").matches(response.body())
@@ -76,40 +68,56 @@ class ProvisionRequestRunner(
     return response.statusCode()
   }
 
-  fun waitForFinish(instanceId: String, expectedFinalStatusCode: Int): String {
+  fun executeProvision(instanceId: String, requestBody: RequestBody): ExtractableResponse<Response> {
+    return RestAssured.with()
+            .log().all()
+            .header(Header("X-Broker-API-Version", configuration.apiVersion))
+            .header(Header("Authorization", configuration.correctToken))
+            .contentType(ContentType.JSON)
+            .body(requestBody)
+            .put("/v2/service_instances/$instanceId?accepts_incomplete=true")
+            .then()
+            .log().all()
+            .assertThat()
+            .extract()
+  }
+
+  fun waitForFinish(instanceId: String, expectedFinalStatusCode: Int, operationData: String): String {
+
     val response = RestAssured.with()
-        .log().ifValidationFails()
-        .header(Header("X-Broker-API-Version", configuration.apiVersion))
-        .header(Header("Authorization", configuration.correctToken))
-        .contentType(ContentType.JSON)
-        .get("/v2/service_instances/$instanceId/last_operation")
-        .then()
-        .log().ifValidationFails()
-        .assertThat()
-        .extract()
-        .response()
+            .log().ifValidationFails()
+            .header(Header("X-Broker-API-Version", configuration.apiVersion))
+            .header(Header("Authorization", configuration.correctToken))
+            .contentType(ContentType.JSON)
+            .queryParam("operation", operationData)
+            .get("/v2/service_instances/$instanceId/last_operation")
+            .then()
+            .log().ifValidationFails()
+            .assertThat()
+            .extract()
+            .response()
 
     assertTrue("Expected StatusCode is $expectedFinalStatusCode but was ${response.statusCode} ")
-    { response.statusCode in listOf(expectedFinalStatusCode, 200) }
+      { response.statusCode in listOf(expectedFinalStatusCode, 200) }
 
     return if (response.statusCode == 200) {
 
       val responseBody = response.jsonPath()
-          .getObject("", LastOperationResponse::class.java)
+              .getObject("", LastOperationResponse::class.java)
 
       JsonSchemaValidator.matchesJsonSchemaInClasspath("polling-response-schema.json").matches(responseBody)
 
       if (responseBody.state == "in progress") {
         Thread.sleep(10000)
-        return waitForFinish(instanceId, expectedFinalStatusCode)
+        return waitForFinish(instanceId, expectedFinalStatusCode, operationData)
       }
       assertTrue("Expected response body \"succeeded\" or \"failed\" but was ${responseBody.state}")
       { responseBody.state in listOf("succeeded", "failed") }
 
       responseBody.state
-    } else {
+      } else {
       ""
-    }
+      }
   }
 
   fun runDeleteProvisionRequestSync(instanceId: String, serviceId: String?, planId: String?): Int {
@@ -132,22 +140,27 @@ class ProvisionRequestRunner(
   }
 
   fun runDeleteProvisionRequestAsync(instanceId: String, serviceId: String?, planId: String?): Int {
+    val response = executeRunDeleteProvisionRequestAsync(instanceId, serviceId, planId)
 
+    return response
+        .statusCode()
+  }
+
+  fun executeRunDeleteProvisionRequestAsync(instanceId: String, serviceId: String?, planId: String?): ExtractableResponse<Response> {
     var path = "/v2/service_instances/$instanceId?accepts_incomplete=true"
 
     path = serviceId?.let { "$path&service_id=$serviceId" } ?: path
     path = planId?.let { "$path&plan_id=$planId" } ?: path
 
     return RestAssured.with()
-        .log().all()
-        .header(Header("X-Broker-API-Version", configuration.apiVersion))
-        .header(Header("Authorization", configuration.correctToken))
-        .contentType(ContentType.JSON)
-        .delete(path)
-        .then()
-        .log().all  ()
-        .extract()
-        .statusCode()
+              .log().all()
+              .header(Header("X-Broker-API-Version", configuration.apiVersion))
+              .header(Header("Authorization", configuration.correctToken))
+              .contentType(ContentType.JSON)
+              .delete(path)
+              .then()
+              .log().all()
+              .extract()
   }
 
   fun putWithoutHeader() {

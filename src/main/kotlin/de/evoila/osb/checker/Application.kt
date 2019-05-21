@@ -58,6 +58,7 @@ fun main(args: Array<String>) {
       }
 
   val parser = DefaultParser()
+
   val commandLine = parser.parse(options, args)
 
   val selectors = mutableListOf<DiscoverySelector>()

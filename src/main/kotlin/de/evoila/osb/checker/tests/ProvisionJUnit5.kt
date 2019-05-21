@@ -49,65 +49,65 @@ class ProvisionJUnit5 : TestBase() {
     val catalog = configuration.initCustomCatalog() ?: catalogRequestRunner.correctRequest()
     val service = catalog.services.first()
     val plan = service.plans.first()
-    val instanceId = UUID.randomUUID().toString()
 
     val dynamicNodes = mutableListOf<DynamicNode>()
 
-    listOf(
-        TestCase(
-            requestBody = ProvisionBody.ValidProvisioning(
-                service_id = null,
-                plan_id = plan.id
-            ),
-            message = "should reject if missing service_id"
-        ),
-        TestCase(
-            requestBody = ProvisionBody.ValidProvisioning(
-                service_id = service.id,
-                plan_id = null
-            ),
-            message = "should reject if missing plan_id"
-        ),
-        TestCase(
-            requestBody = ProvisionBody.NoServiceFieldProvisioning(
-                service
-            ),
-            message = "should reject if missing service_id field"
-        ),
-        TestCase(
-            requestBody = ProvisionBody.NoPlanFieldProvisioning(
-                plan
-            ),
-            message = "should reject if missing plan_id field"
-        ),
-        TestCase(
-            requestBody = ProvisionBody.NoSpaceFieldProvisioning(
-                service, plan
-            ),
-            message = "should reject if missing service_id field"
-        ),
-        TestCase(
-            requestBody = ProvisionBody.NoOrgFieldProvisioning(
-                service, plan
-            ),
-            message = "should reject if missing service_id field"
-        ),
-        TestCase(
-            requestBody = ProvisionBody.ValidProvisioning(
-                "Invalid", plan.id
-            ),
-            message = "should reject if missing service_id is Invalid"
-        ),
-        TestCase(
-            requestBody = ProvisionBody.ValidProvisioning(
-                service.id, "Invalid"
-            ),
-            message = "should reject if missing plan_id is Invalid"
-        )
-    ).forEach {
+      listOf(
+              TestCase(
+                      requestBody = ProvisionBody.ValidProvisioning(
+                              service_id = null,
+                              plan_id = plan.id
+                      ),
+                      message = "should reject if missing service_id"
+              ),
+              TestCase(
+                      requestBody = ProvisionBody.ValidProvisioning(
+                              service_id = service.id,
+                              plan_id = null
+                      ),
+                      message = "should reject if missing plan_id"
+              ),
+              TestCase(
+                      requestBody = ProvisionBody.NoServiceFieldProvisioning(
+                              service
+                      ),
+                      message = "should reject if missing service_id field"
+              ),
+              TestCase(
+                      requestBody = ProvisionBody.NoPlanFieldProvisioning(
+                              plan
+                      ),
+                      message = "should reject if missing plan_id field"
+              ),
+              TestCase(
+                      requestBody = ProvisionBody.NoOrgFieldProvisioning(
+                              service, plan
+                      ),
+                      message = "should reject if missing org_guid field"
+              ),
+              TestCase(
+                      requestBody = ProvisionBody.NoSpaceFieldProvisioning(
+                              service, plan
+                      ),
+                      message = "should reject if missing space_guid field"
+              ),
+              TestCase(
+                      requestBody = ProvisionBody.ValidProvisioning(
+                              "Invalid", plan.id
+                      ),
+                      message = "should reject if missing service_id is Invalid"
+              ),
+              TestCase(
+                      requestBody = ProvisionBody.ValidProvisioning(
+                              service.id, "Invalid"
+                      ),
+                      message = "should reject if missing plan_id is Invalid"
+              )
+      )
+            .forEach {
       dynamicNodes.add(
           DynamicTest.dynamicTest("PUT ${it.message}") {
-            val statusCode = provisionRequestRunner.runPutProvisionRequestAsync(instanceId, it.requestBody)
+            val statusCode = provisionRequestRunner.runPutProvisionRequestAsync(UUID.randomUUID().toString(), it.requestBody)
             assertTrue("Expected status code is 400 but was $statusCode") {
               400 == statusCode
             }
