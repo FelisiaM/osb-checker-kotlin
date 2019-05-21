@@ -80,18 +80,6 @@ class ProvisionJUnit5 : TestBase() {
                       message = "should reject if missing plan_id field"
               ),
               TestCase(
-                      requestBody = ProvisionBody.NoOrgFieldProvisioning(
-                              service, plan
-                      ),
-                      message = "should reject if missing org_guid field"
-              ),
-              TestCase(
-                      requestBody = ProvisionBody.NoSpaceFieldProvisioning(
-                              service, plan
-                      ),
-                      message = "should reject if missing space_guid field"
-              ),
-              TestCase(
                       requestBody = ProvisionBody.ValidProvisioning(
                               "Invalid", plan.id
                       ),
